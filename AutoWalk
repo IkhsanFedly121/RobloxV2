@@ -1,0 +1,396 @@
+-- ====================== SISTEM PREMIUM LENGKAP ======================
+-- [UI Harga + Input Key] → [Verifikasi] → [Timer] → [Load Skrip VIP]
+
+local Player = game.Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local HttpService = game:GetService("HttpService")
+
+-- ================= KONFIGURASI =================
+local GAS_URL = "https://script.google.com/macros/s/AKfycbyXjFcfB2ctZhutC5Qoqvk7fgsuwKUZqAhZEck69elYc8FYPz7RB6Q_Z8BTkX1X7AmoKQ/exec"
+local VALIDATION_URL = GAS_URL .. "?key="
+local VIP_SCRIPT_URL = "https://pastebin.com/raw/UNNHEtVH" -- Skrip utama Anda
+
+-- ================= BERSIHKAN UI LAMA =================
+for _, gui in pairs(PlayerGui:GetChildren()) do
+    if gui.Name == "PremiumFullSystem" then
+        gui:Destroy()
+    end
+end
+wait(0.1)
+
+-- ================= WARNA THEME =================
+local ColorPalette = {
+    Primary = Color3.fromRGB(106, 13, 173),     -- Ungu
+    Secondary = Color3.fromRGB(255, 215, 0),    -- Emas
+    Accent = Color3.fromRGB(0, 255, 200),       -- Cyan
+    Dark = Color3.fromRGB(15, 15, 25)
+}
+
+-- ================= SCREEN GUI UTAMA =================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "PremiumFullSystem"
+screenGui.ResetOnSpawn = false
+screenGui.Parent = PlayerGui
+
+-- ================= FRAME UTAMA (PAKET + INPUT KEY) =================
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 450, 0, 500)
+mainFrame.Position = UDim2.new(0.5, -225, 0.5, -250)
+mainFrame.BackgroundColor3 = ColorPalette.Dark
+mainFrame.BackgroundTransparency = 0.05
+mainFrame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 20)
+corner.Parent = mainFrame
+
+local border = Instance.new("UIStroke")
+border.Thickness = 3
+border.Color = ColorPalette.Primary
+border.Parent = mainFrame
+
+-- ================= HEADER =================
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0.1, 0)
+title.Position = UDim2.new(0, 0, 0.03, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = ColorPalette.Secondary
+title.Font = Enum.Font.GothamBold
+title.TextSize = 24
+title.Text = "✨ AUTO WALK BY IKHSAN FEDLY ✨"
+title.Parent = mainFrame
+
+local subtitle = Instance.new("TextLabel")
+subtitle.Size = UDim2.new(1, 0, 0.06, 0)
+subtitle.Position = UDim2.new(0, 0, 0.11, 0)
+subtitle.BackgroundTransparency = 1
+subtitle.TextColor3 = ColorPalette.Accent
+subtitle.Font = Enum.Font.Gotham
+subtitle.TextSize = 16
+subtitle.Text = "Mau gratis? wa aja gua gak pelit"
+subtitle.Parent = mainFrame
+
+-- ================= PAKET HARGA =================
+local priceFrame = Instance.new("Frame")
+priceFrame.Size = UDim2.new(0.9, 0, 0.25, 0)
+priceFrame.Position = UDim2.new(0.05, 0, 0.2, 0)
+priceFrame.BackgroundColor3 = Color3.fromRGB(25, 15, 45)
+priceFrame.BackgroundTransparency = 0.2
+priceFrame.Parent = mainFrame
+
+local priceCorner = Instance.new("UICorner")
+priceCorner.CornerRadius = UDim.new(0, 15)
+priceCorner.Parent = priceFrame
+
+local priceTitle = Instance.new("TextLabel")
+priceTitle.Size = UDim2.new(1, 0, 0.25, 0)
+priceTitle.Position = UDim2.new(0, 0, 0.05, 0)
+priceTitle.BackgroundTransparency = 1
+priceTitle.TextColor3 = ColorPalette.Secondary
+priceTitle.Font = Enum.Font.GothamBold
+priceTitle.TextSize = 18
+priceTitle.Text = "💎 PAKET PREMIUM"
+priceTitle.Parent = priceFrame
+
+-- Paket 1 Bulan
+local package1 = Instance.new("Frame")
+package1.Size = UDim2.new(0.9, 0, 0.3, 0)
+package1.Position = UDim2.new(0.05, 0, 0.35, 0)
+package1.BackgroundColor3 = Color3.fromRGB(40, 30, 70)
+package1.Parent = priceFrame
+
+local p1Label = Instance.new("TextLabel")
+p1Label.Size = UDim2.new(1, 0, 1, 0)
+p1Label.BackgroundTransparency = 1
+p1Label.TextColor3 = Color3.fromRGB(255, 255, 255)
+p1Label.Font = Enum.Font.GothamSemibold
+p1Label.TextSize = 16
+p1Label.Text = "🟣 1 BULAN - Rp 25.000"
+p1Label.Parent = package1
+
+-- Paket 1 Tahun
+local package2 = Instance.new("Frame")
+package2.Size = UDim2.new(0.9, 0, 0.3, 0)
+package2.Position = UDim2.new(0.05, 0, 0.7, 0)
+package2.BackgroundColor3 = Color3.fromRGB(60, 40, 100)
+package2.Parent = priceFrame
+
+local p2Label = Instance.new("TextLabel")
+p2Label.Size = UDim2.new(1, 0, 1, 0)
+p2Label.BackgroundTransparency = 1
+p2Label.TextColor3 = ColorPalette.Secondary
+p2Label.Font = Enum.Font.GothamBold
+p2Label.TextSize = 16
+p2Label.Text = "⭐ 1 TAHUN - Rp 100.000"
+p2Label.Parent = package2
+
+-- ================= INPUT KEY =================
+local keyContainer = Instance.new("Frame")
+keyContainer.Size = UDim2.new(0.9, 0, 0.15, 0)
+keyContainer.Position = UDim2.new(0.05, 0, 0.48, 0)
+keyContainer.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+keyContainer.Parent = mainFrame
+
+local keyBox = Instance.new("TextBox")
+keyBox.Size = UDim2.new(0.9, 0, 0.6, 0)
+keyBox.Position = UDim2.new(0.05, 0, 0.2, 0)
+keyBox.PlaceholderText = "Masukkan kunci premium di sini..."
+keyBox.Text = ""
+keyBox.TextSize = 16
+keyBox.BackgroundColor3 = Color3.fromRGB(10, 10, 15)
+keyBox.TextColor3 = Color3.fromRGB(0, 255, 150)
+keyBox.Parent = keyContainer
+
+-- ================= TOMBOL VERIFIKASI =================
+local verifyBtn = Instance.new("TextButton")
+verifyBtn.Size = UDim2.new(0.6, 0, 0.08, 0)
+verifyBtn.Position = UDim2.new(0.2, 0, 0.65, 0)
+verifyBtn.Text = "✅ VERIFIKASI KEY"
+verifyBtn.Font = Enum.Font.GothamBold
+verifyBtn.TextSize = 16
+verifyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+verifyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+verifyBtn.Parent = mainFrame
+
+-- ================= STATUS LABEL =================
+local statusLabel = Instance.new("TextLabel")
+statusLabel.Size = UDim2.new(0.9, 0, 0.08, 0)
+statusLabel.Position = UDim2.new(0.05, 0, 0.75, 0)
+statusLabel.BackgroundTransparency = 1
+statusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.TextSize = 14
+statusLabel.Text = "Status: Menunggu key..."
+statusLabel.Parent = mainFrame
+
+-- ================= CONTACT INFO =================
+local contactFrame = Instance.new("Frame")
+contactFrame.Size = UDim2.new(0.9, 0, 0.08, 0)
+contactFrame.Position = UDim2.new(0.05, 0, 0.85, 0)
+contactFrame.BackgroundColor3 = Color3.fromRGB(25, 135, 84) -- Hijau WhatsApp
+contactFrame.Parent = mainFrame
+
+local contactLabel = Instance.new("TextLabel")
+contactLabel.Size = UDim2.new(1, 0, 1, 0)
+contactLabel.BackgroundTransparency = 1
+contactLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+contactLabel.Font = Enum.Font.GothamBold
+contactLabel.TextSize = 16
+contactLabel.Text = "📞 ORDER: 085709250462"
+contactLabel.Parent = contactFrame
+
+-- ================= FUNGSI FORMAT TIMER =================
+local function formatTime(seconds)
+    if not seconds then return "N/A" end
+    
+    local days = math.floor(seconds / 86400)
+    local hours = math.floor((seconds % 86400) / 3600)
+    local minutes = math.floor((seconds % 3600) / 60)
+    local secs = math.floor(seconds % 60)
+    
+    if days > 0 then
+        return string.format("%d hari %02d jam", days, hours)
+    elseif hours > 0 then
+        return string.format("%02d:%02d:%02d", hours, minutes, secs)
+    else
+        return string.format("%02d:%02d", minutes, secs)
+    end
+end
+
+-- ================= FUNGSI LOAD SKRIP VIP =================
+local function loadVIPScript()
+    print("🔧 Memuat skrip VIP dari Pastebin...")
+    
+    local success, scriptContent = pcall(function()
+        return game:HttpGet(VIP_SCRIPT_URL, true)
+    end)
+    
+    if not success then
+        warn("❌ Gagal mengunduh skrip VIP")
+        return false
+    end
+    
+    local chunk, err = loadstring(scriptContent)
+    if not chunk then
+        warn("❌ Error kompilasi: " .. tostring(err))
+        return false
+    end
+    
+    -- Jalankan skrip VIP
+    local execSuccess, runtimeErr = pcall(chunk)
+    if not execSuccess then
+        warn("⚠️ Runtime error: " .. tostring(runtimeErr))
+    end
+    
+    return true
+end
+
+-- ================= FUNGSI TAMPILKAN TIMER SEMENTARA =================
+local function showTempTimer(durationSeconds)
+    -- Buat frame timer khusus
+    local timerFrame = Instance.new("Frame")
+    timerFrame.Size = UDim2.new(0, 300, 0, 150)
+    timerFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+    timerFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    timerFrame.BackgroundTransparency = 0.2
+    timerFrame.Parent = screenGui
+    
+    local timerCorner = Instance.new("UICorner")
+    timerCorner.CornerRadius = UDim.new(0, 15)
+    timerCorner.Parent = timerFrame
+    
+    local timerBorder = Instance.new("UIStroke")
+    timerBorder.Thickness = 3
+    timerBorder.Color = ColorPalette.Accent
+    timerBorder.Parent = timerFrame
+    
+    -- Label timer
+    local timerTitle = Instance.new("TextLabel")
+    timerTitle.Size = UDim2.new(1, 0, 0.3, 0)
+    timerTitle.Position = UDim2.new(0, 0, 0.1, 0)
+    timerTitle.BackgroundTransparency = 1
+    timerTitle.TextColor3 = ColorPalette.Secondary
+    timerTitle.Font = Enum.Font.GothamBold
+    timerTitle.TextSize = 20
+    timerTitle.Text = "⏳ PREMIUM AKTIF!"
+    timerTitle.Parent = timerFrame
+    
+    local timerText = Instance.new("TextLabel")
+    timerText.Size = UDim2.new(1, 0, 0.4, 0)
+    timerText.Position = UDim2.new(0, 0, 0.4, 0)
+    timerText.BackgroundTransparency = 1
+    timerText.TextColor3 = ColorPalette.Accent
+    timerText.Font = Enum.Font.GothamBold
+    timerText.TextSize = 28
+    timerText.Text = formatTime(durationSeconds)
+    timerText.Parent = timerFrame
+    
+    -- Countdown dan animasi fade out
+    local count = 3  -- Tampilkan selama 3 detik
+    
+    task.spawn(function()
+        while count > 0 do
+            timerText.Text = formatTime(durationSeconds) .. "\n(" .. count .. ")"
+            count = count - 1
+            wait(1)
+        end
+        
+        -- Animasi fade out
+        for i = 0, 1, 0.1 do
+            timerFrame.BackgroundTransparency = 0.2 + (i * 0.8)
+            timerBorder.Transparency = i
+            timerTitle.TextTransparency = i
+            timerText.TextTransparency = i
+            wait(0.05)
+        end
+        
+        timerFrame:Destroy()
+    end)
+    
+    return timerFrame
+end
+
+-- ================= FUNGSI VERIFIKASI KEY =================
+local function verifyKey(key)
+    if string.len(key) == 0 then
+        statusLabel.Text = "❌ Key tidak boleh kosong"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        return
+    end
+    
+    statusLabel.Text = "🔐 Memverifikasi key..."
+    statusLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
+    verifyBtn.Text = "MEMVERIFIKASI..."
+    verifyBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    
+    -- Kirim ke Google Script
+    local url = VALIDATION_URL .. key .. "&userid=" .. Player.UserId
+    local success, response = pcall(function()
+        return game:HttpGet(url, true, {Timeout = 10})
+    end)
+    
+    verifyBtn.Text = "✅ VERIFIKASI KEY"
+    verifyBtn.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+    
+    if not success then
+        statusLabel.Text = "❌ Gagal terhubung ke server"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        return
+    end
+    
+    if not response or response == "" then
+        statusLabel.Text = "⚠️ Server tidak merespon"
+        statusLabel.TextColor3 = Color3.fromRGB(255, 140, 0)
+        return
+    end
+    
+    -- Coba eksekusi sebagai Lua (sistem lama)
+    local chunk, err = loadstring(response)
+    if chunk then
+        -- Key VALID!
+        statusLabel.Text = "✅ Key valid! Memuat..."
+        statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+        
+        -- Eksekusi kode dari GAS (set _G.KeyDurationSeconds)
+        local execSuccess = pcall(chunk)
+        
+        -- Tampilkan timer sementara
+        if _G.KeyDurationSeconds then
+            showTempTimer(_G.KeyDurationSeconds)
+        end
+        
+        -- Tunggu 2 detik, lalu load skrip VIP
+        wait(2)
+        
+        -- Sembunyikan UI utama dengan animasi
+        for i = 0, 1, 0.1 do
+            mainFrame.BackgroundTransparency = 0.05 + (i * 0.95)
+            border.Transparency = i
+            wait(0.03)
+        end
+        
+        mainFrame.Visible = false
+        
+        -- Load skrip utama VIP dari Pastebin
+        loadVIPScript()
+        
+    else
+        -- Coba parse JSON
+        local jsonSuccess, data = pcall(HttpService.JSONDecode, HttpService, response)
+        if jsonSuccess and data then
+            if data.success == true or data.valid == true then
+                statusLabel.Text = "✅ " .. (data.message or "Key valid!")
+                statusLabel.TextColor3 = Color3.fromRGB(0, 255, 0)
+                
+                wait(2)
+                mainFrame.Visible = false
+                loadVIPScript()
+            else
+                statusLabel.Text = "❌ " .. (data.message or "Key tidak valid")
+                statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+            end
+        else
+            statusLabel.Text = "❌ Key tidak valid"
+            statusLabel.TextColor3 = Color3.fromRGB(255, 50, 50)
+        end
+    end
+end
+
+-- ================= KONEKSI EVENT =================
+verifyBtn.MouseButton1Click:Connect(function()
+    local inputKey = string.gsub(keyBox.Text, "%s+", "")
+    task.spawn(verifyKey, inputKey)
+end)
+
+keyBox.FocusLost:Connect(function(enterPressed)
+    if enterPressed then
+        local inputKey = string.gsub(keyBox.Text, "%s+", "")
+        task.spawn(verifyKey, inputKey)
+    end
+end)
+
+-- ================= INFORMASI AWAL =================
+print("===============================================")
+print("PREMIUM SYSTEM BY IKHSAN - LOADED")
+print("URL Script VIP: " .. VIP_SCRIPT_URL)
+print("===============================================")
