@@ -1,0 +1,278 @@
+// ============================================
+// KONFIGURASI SIMPLE
+// ============================================
+var SPREADSHEET_ID = "1DIgRllLJaOqCVnULfiZLlDDi1wr69-eW65PwsOJMwF4";
+var SHEET_NAME = "KEY2";
+
+// Struktur kolom SIMPLE:
+// A: KEY | B: STATUS | C: DURASI_HARI | D: EXPIRY_TIMESTAMP | E: USER_ID | F: LAST_ACTIVE
+var COLUMNS = {
+  KEY: 0,
+  STATUS: 1,
+  DURASI: 2,
+  EXPIRY_TIMESTAMP: 3,  // ⚠️ SIMPAN EXPIRY LANGSUNG!
+  USER_ID: 4,
+  LAST_ACTIVE: 5
+};
+
+// ============================================
+// FUNGSI UTAMA - SIMPLE VERSION
+// ============================================
+function doGet(e) {
+  console.log("=== REQUEST ===");
+  
+  try {
+    if (!e) {
+      return jsonResponse({status: "ready", version: "simple"});
+    }
+    
+    var params = e.parameter || {};
+    var action = params.action || "login";
+    var key = String(params.key || "").trim().toUpperCase();
+    var userId = String(params.userid || "").trim();
+    
+    console.log("Action:", action, "Key:", key, "User:", userId);
+    
+    // Validasi
+    if (!key && action !== "cleanup") {
+      return jsonResponse({error: "Key diperlukan"});
+    }
+    
+    if (!userId && action !== "cleanup") {
+      return jsonResponse({error: "User ID diperlukan"});
+    }
+    
+    // Routing sederhana
+    if (action === "logout") {
+      return simpleLogout(key, userId);
+    } else if (action === "cleanup") {
+      return simpleCleanup();
+    } else {
+      return simpleLogin(key, userId);
+    }
+    
+  } catch (error) {
+    console.error("ERROR:", error);
+    return jsonResponse({error: "Server error"});
+  }
+}
+
+function doPost(e) {
+  return doGet(e); // POST sama dengan GET untuk simple version
+}
+
+// ============================================
+// FUNGSI LOGIN - SIMPLE
+// ============================================
+function simpleLogin(key, userId) {
+  console.log("=== LOGIN SIMPLE ===");
+  
+  try {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    if (!sheet) return jsonResponse({error: "Sheet tidak ditemukan"});
+    
+    var data = sheet.getDataRange().getValues();
+    var now = new Date();
+    var nowTimestamp = Math.floor(now.getTime() / 1000);
+    
+    // Cari key
+    for (var i = 1; i < data.length; i++) {
+      var rowKey = data[i][COLUMNS.KEY];
+      if (rowKey && String(rowKey).trim().toUpperCase() === key) {
+        var rowData = data[i];
+        
+        console.log("✓ Key found at row:", i + 1);
+        
+        // 1. Cek status
+        var status = rowData[COLUMNS.STATUS];
+        if (status === false || status === "FALSE" || status === "false") {
+          return jsonResponse({error: "Key dinonaktifkan"});
+        }
+        
+        // 2. Cek expiry timestamp
+        var expiryTimestamp = Number(rowData[COLUMNS.EXPIRY_TIMESTAMP]) || 0;
+        var durationDays = Number(rowData[COLUMNS.DURASI]) || 0;
+        
+        // Jika belum ada expiry, hitung dari sekarang
+        if (expiryTimestamp === 0 && durationDays > 0) {
+          expiryTimestamp = nowTimestamp + (durationDays * 86400);
+          sheet.getRange(i + 1, COLUMNS.EXPIRY_TIMESTAMP + 1).setValue(expiryTimestamp);
+          console.log("✓ Set expiry timestamp:", expiryTimestamp);
+        }
+        
+        var remainingSeconds = expiryTimestamp - nowTimestamp;
+        console.log("Now:", nowTimestamp, "Expiry:", expiryTimestamp, "Remaining:", remainingSeconds);
+        
+        if (remainingSeconds <= 0) {
+          return jsonResponse({error: "Key expired"});
+        }
+        
+        // 3. Cek user lain (SIMPLE VERSION - 30 detik timeout)
+        var currentUser = rowData[COLUMNS.USER_ID] || "NONE";
+        var lastActive = rowData[COLUMNS.LAST_ACTIVE];
+        
+        if (lastActive) {
+          var lastTime = new Date(lastActive).getTime();
+          var timeDiff = now.getTime() - lastTime;
+          
+          console.log("Current user:", currentUser, "Last active:", lastActive, "Diff:", Math.floor(timeDiff/1000), "s");
+          
+          if (currentUser !== "NONE" && currentUser !== userId && timeDiff < 30000) {
+            var waitTime = Math.ceil((30000 - timeDiff) / 1000);
+            return jsonResponse({
+              error: "Key sedang dipakai",
+              waitTime: Math.min(30, waitTime)
+            });
+          }
+        }
+        
+        // 4. Update data
+        sheet.getRange(i + 1, COLUMNS.USER_ID + 1).setValue(userId);
+        sheet.getRange(i + 1, COLUMNS.LAST_ACTIVE + 1).setValue(now.toISOString());
+        
+        console.log("✅ Login success! Remaining:", remainingSeconds, "s");
+        
+        return jsonResponse({
+          success: true,
+          userId: userId,
+          remainingSeconds: remainingSeconds,
+          expiryTimestamp: expiryTimestamp
+        });
+      }
+    }
+    
+    return jsonResponse({error: "Key tidak ditemukan"});
+    
+  } catch (error) {
+    console.error("❌ Login ERROR:", error);
+    return jsonResponse({error: "Login failed"});
+  }
+}
+
+// ============================================
+// FUNGSI LOGOUT - SIMPLE
+// ============================================
+function simpleLogout(key, userId) {
+  console.log("=== LOGOUT SIMPLE ===");
+  
+  try {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    if (!sheet) return jsonResponse({error: "Sheet tidak ditemukan"});
+    
+    var data = sheet.getDataRange().getValues();
+    
+    for (var i = 1; i < data.length; i++) {
+      var rowKey = data[i][COLUMNS.KEY];
+      var rowUser = data[i][COLUMNS.USER_ID];
+      
+      if (rowKey && String(rowKey).trim().toUpperCase() === key && 
+          rowUser && String(rowUser).trim() === userId) {
+        
+        sheet.getRange(i + 1, COLUMNS.USER_ID + 1).setValue("NONE");
+        console.log("✓ Logout successful");
+        return jsonResponse({success: true});
+      }
+    }
+    
+    return jsonResponse({error: "Key/user tidak cocok"});
+    
+  } catch (error) {
+    console.error("❌ Logout ERROR:", error);
+    return jsonResponse({error: "Logout failed"});
+  }
+}
+
+// ============================================
+// FUNGSI CLEANUP - SIMPLE
+// ============================================
+function simpleCleanup() {
+  console.log("=== CLEANUP SIMPLE ===");
+  
+  try {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    if (!sheet) return jsonResponse({error: "Sheet tidak ditemukan"});
+    
+    var data = sheet.getDataRange().getValues();
+    var now = new Date();
+    var cleaned = 0;
+    
+    for (var i = 1; i < data.length; i++) {
+      var lastActive = data[i][COLUMNS.LAST_ACTIVE];
+      var user = data[i][COLUMNS.USER_ID];
+      
+      if (lastActive && user && String(user).trim() !== "NONE") {
+        var lastTime = new Date(lastActive).getTime();
+        var diff = now.getTime() - lastTime;
+        
+        // Auto-logout setelah 2 menit
+        if (diff > 120000) {
+          sheet.getRange(i + 1, COLUMNS.USER_ID + 1).setValue("NONE");
+          cleaned++;
+        }
+      }
+    }
+    
+    console.log("✓ Cleaned", cleaned, "inactive sessions");
+    return jsonResponse({
+      success: true,
+      cleaned: cleaned
+    });
+    
+  } catch (error) {
+    console.error("❌ Cleanup ERROR:", error);
+    return jsonResponse({error: "Cleanup failed"});
+  }
+}
+
+// ============================================
+// FUNGSI BANTU
+// ============================================
+function jsonResponse(data) {
+  return ContentService.createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ============================================
+// FUNGSI SETUP SHEET (JALANKAN SEKALI)
+// ============================================
+function setupSimpleSheet() {
+  console.log("=== SETUP SIMPLE SHEET ===");
+  
+  try {
+    var sheet = SpreadsheetApp.openById(SPREADSHEET_ID).getSheetByName(SHEET_NAME);
+    
+    // Tambah kolom EXPIRY_TIMESTAMP jika belum ada
+    var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+    
+    if (headers.length < 6) {
+      // Tambah header
+      sheet.getRange(1, 4).setValue("EXPIRY_TIMESTAMP");
+      sheet.getRange(1, 5).setValue("USER_ID");
+      sheet.getRange(1, 6).setValue("LAST_ACTIVE");
+      
+      console.log("✓ Added new headers");
+    }
+    
+    // Convert existing data
+    var data = sheet.getDataRange().getValues();
+    var nowTimestamp = Math.floor(Date.now() / 1000);
+    
+    for (var i = 1; i < data.length; i++) {
+      var duration = Number(data[i][2]) || 0;
+      var expiryCell = sheet.getRange(i + 1, 4);
+      
+      if (duration > 0) {
+        // Set expiry = sekarang + duration hari
+        var expiry = nowTimestamp + (duration * 86400);
+        expiryCell.setValue(expiry);
+        console.log("Row", i + 1, ": Set expiry to", expiry);
+      }
+    }
+    
+    return "Sheet setup complete!";
+    
+  } catch (error) {
+    console.error("Setup ERROR:", error);
+    return "Setup failed: " + error.message;
+  }
+}
